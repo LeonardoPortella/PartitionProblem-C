@@ -7,12 +7,12 @@
 #include </home/leonardo/IA/PP/GeraTeste.c>
 
 const int tamPopulacao = 1000;
-const int percSobreviventes = 40;
+const int percSobreviventes = 10;
 const int percMutacao = 2;
 const int repeticoes = 1000;
 const int percElite = 1;
-const int percRenovacao = 30;
-const int limSemMelhorarFit = 100;
+const int percRenovacao = 20;
+const int limSemMelhorarFit = 500;
 	
 //============================================================================================================
 
@@ -162,8 +162,6 @@ void Crossover(Cromossomo *populacao, int qtdSobreviventes, int tamPopulacao, in
 	int metadeGenes = ( qtdGenes - ( qtdGenes % 2) ) /2;
 	int indSelCrossover = 0;
 	
-	qsort(populacao, tamPopulacao, sizeof(Cromossomo), ordenaCrossover);
-	
 	while(cont < filhos)
 	{
 		indPai = indSelCrossover++;
@@ -178,7 +176,7 @@ void Crossover(Cromossomo *populacao, int qtdSobreviventes, int tamPopulacao, in
 		{
 			indFilho = qtdSobreviventes + ( rand() % ( tamPopulacao - qtdSobreviventes - 1 ) );
 		}
-		while(populacao[indFilho].elite == 1 || populacao[indFilho].crossover == 1);
+		while(populacao[indFilho].elite == 1);
 		
 		// 50% pai + 50% mae	
 		for(int j = 0; j < qtdGenes; ++j)
@@ -198,7 +196,7 @@ void Crossover(Cromossomo *populacao, int qtdSobreviventes, int tamPopulacao, in
 			{
 				indFilho = qtdSobreviventes + ( rand() % ( tamPopulacao - qtdSobreviventes - 1 ) );
 			}
-			while(populacao[indFilho].elite == 1 || populacao[indFilho].crossover == 1);
+			while(populacao[indFilho].elite == 1);
 			
 			// 50% mae + 50% pai
 			for(int j = 0; j < qtdGenes; ++j)
@@ -220,7 +218,7 @@ void Crossover(Cromossomo *populacao, int qtdSobreviventes, int tamPopulacao, in
 		{
 			indFilho = ( rand() % tamPopulacao );
 		}
-		while(populacao[indFilho].elite == 1 || populacao[indFilho].crossover == 1);
+		while(populacao[indFilho].elite == 1);
 
 		CromossomoAleatorio(&populacao[indFilho], qtdGenes);
 	}
@@ -298,8 +296,6 @@ void CalculaAptidao(Cromossomo *populacao, int tamPopulacao, long int *genes, in
 			maxAptidao = populacao[i].aptidao;
 	}
 
-	qsort(populacao, tamPopulacao, sizeof(Cromossomo), ordenaAptidao);
-
 	float aptidaoAnt = 0;
 
 	for(int i = 0; i < tamPopulacao; ++i)
@@ -361,7 +357,8 @@ char *CriaArquivo(int qtdLista)
 {
 	//So cria se nao existir
 	int maxLista = 4000000000;
-	char nome[] = "ListaRand";
+	//char nome[] = "ListaRand";
+	char nome[] = "ListaSeq";
 	char *filename = (char*)malloc(strlen(nome) * sizeof(char) + 1); 
 	strcpy(filename, nome);
 	char tamanhoStr[10];
@@ -386,11 +383,11 @@ char *CriaArquivo(int qtdLista)
 		time(&segundos);  
 		data_hora_atual = localtime(&segundos);  
 
-		printf("- Geracao e leitura do arquivo[ %d:%d:%d ]\n",data_hora_atual->tm_hour, data_hora_atual->tm_min, data_hora_atual->tm_sec);
+		printf("- Gerando arquivo[ %d:%d:%d ]\n",data_hora_atual->tm_hour, data_hora_atual->tm_min, data_hora_atual->tm_sec);
 		clock_t inicio = clock();
 
-		//ListaSequencial(1, qtdLista, filename);
-		ListaAleatoria(1, maxLista, qtdLista, filename);
+		ListaSequencial(1, qtdLista, filename);
+		//ListaAleatoria(1, maxLista, qtdLista, filename);
 		
 		time(&segundos);  
 		data_hora_atual = localtime(&segundos);  
@@ -450,6 +447,8 @@ int main (int argc, char **argv)
 
 	while(cont++ < repeticoes && naoMelhorouFit++ < limSemMelhorarFit)
 	{
+		qsort(populacao, tamPopulacao, sizeof(Cromossomo), ordenaAptidao);
+
 		CalculaAptidao(populacao, tamPopulacao, genes, qtdGenes);
 
 		if(cont == 1 || populacao[0].aptidao < fitSolucao)
@@ -468,6 +467,8 @@ int main (int argc, char **argv)
 		
 		Selecao(populacao, qtdSobreviventes, tamPopulacao, qtdElite);
 
+		qsort(populacao, tamPopulacao, sizeof(Cromossomo), ordenaCrossover);
+	
 		Crossover(populacao, qtdSobreviventes, tamPopulacao, qtdGenes, qtdRenovacao);
 
 		Mutacao(populacao, qtdMutacao, qtdSobreviventes, tamPopulacao, qtdGenes);
