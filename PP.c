@@ -6,13 +6,13 @@
 #include </home/leonardo/IA/PP/Util.c>
 #include </home/leonardo/IA/PP/GeraTeste.c>
 
-const int tamPopulacao = 1000;
-const int percSobreviventes = 10;
-const int percMutacao = 2;
-const int repeticoes = 1000;
+const int tamPopulacao = 100;
+const int percSobreviventes = 30;
+const int percMutacao = 1;
+const int repeticoes = 100000;
 const int percElite = 1;
-const int percRenovacao = 20;
-const int limSemMelhorarFit = 500;
+const int percRenovacao = 30;
+const int limSemMelhorarFit = 1000;
 	
 //============================================================================================================
 
@@ -111,6 +111,7 @@ void printPopulacao(Cromossomo *populacao, int tamPopulacao, int qtdGenes)
 		printf("cromossomo ");
 		PrintLista(populacao[i].cromossomo, qtdGenes);
 		printf("apt %i\n", populacao[i].aptidao);
+		printf("aptRoleta %f\n", populacao[i].aptidaoRoleta);
 	}
 }
 
@@ -142,7 +143,7 @@ void Mutacao(Cromossomo *populacao, int qtdMutacao, int qtdSobreviventes, int ta
 		{
 			indMutacao = ( rand() % ( tamPopulacao - 1 ) );
 		}
-		while( populacao[indMutacao].elite == 1);
+		while( populacao[indMutacao].elite == 1 );
 
 		indGeneMutacao = ( rand() % ( qtdGenes - 1 ) );
 
@@ -300,7 +301,7 @@ void CalculaAptidao(Cromossomo *populacao, int tamPopulacao, long int *genes, in
 
 	for(int i = 0; i < tamPopulacao; ++i)
 	{	
-		populacao[i].aptidaoRoleta = ( populacao[i].aptidao == 0 ) ? maxAptidao : ( maxAptidao / populacao[i].aptidao ); //Inversamente proporcional a aptidao 
+		populacao[i].aptidaoRoleta = (float)(( populacao[i].aptidao == 0 ) ? maxAptidao : ( maxAptidao / populacao[i].aptidao )); //Inversamente proporcional a aptidao 
 		populacao[i].aptidaoRoleta += aptidaoAnt; //As chances sao o espaco entre as aptidoes
 	}
 }
@@ -440,16 +441,16 @@ int main (int argc, char **argv)
 	populacao = PopulacaoInicial(tamPopulacao, qtdGenes);
 
 	//printPopulacao(populacao, tamPopulacao, qtdGenes);
-	//printf("-------------------------------------------\n");
+	//printf("-------------------------------------------n");
 		
 	int cont = 0;
 	int naoMelhorouFit = 0;
 
 	while(cont++ < repeticoes && naoMelhorouFit++ < limSemMelhorarFit)
 	{
-		qsort(populacao, tamPopulacao, sizeof(Cromossomo), ordenaAptidao);
-
 		CalculaAptidao(populacao, tamPopulacao, genes, qtdGenes);
+
+		qsort(populacao, tamPopulacao, sizeof(Cromossomo), ordenaAptidao);
 
 		if(cont == 1 || populacao[0].aptidao < fitSolucao)
 		{
