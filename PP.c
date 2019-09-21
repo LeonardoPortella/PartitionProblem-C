@@ -720,15 +720,13 @@ void ProcessaGenetico(int qtdGenes, int seed)
 
     PrintSolucao( populacao->melhorCromossomo.genotipo , populacao->genes , qtdGenes );
 
-    printf("Fit %li", Fitness( populacao->melhorCromossomo.genotipo , populacao->genes , populacao->qtdGenes ));
-
 	free( populacao->genes );
 
     for(int i = 0; i < populacao->tamPopulacao; ++i)
-        free( populacao->cromossomo->genotipo );
+        free( populacao->cromossomo[ i ].genotipo );
 
     free( populacao->cromossomo );
-    //free( populacao->melhorCromossomo.genotipo );
+    free( populacao->melhorCromossomo.genotipo );
     free( populacao );
 }
 
