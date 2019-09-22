@@ -66,7 +66,7 @@ void ParametrosIniciais(Populacao *populacao)
 	//Fixo
 	populacao->tamPopulacao = 100;
 	populacao->repeticoes = 100000;
-	populacao->limSemMelhorFit = 1000;
+	populacao->limSemMelhorFit = 500;
 	populacao->rodadasAjusteParam = 2;
 	populacao->percSobreviventes = 20;
 	populacao->iteracoesSemMelhorFit = 0;
@@ -571,11 +571,14 @@ void Renovacao( Populacao *populacao)
 
 void Crossover( Populacao *populacao )
 {
-    int indPai;
+	//Crossover de 2 pontos aleatorios
+    
+	int indPai;
     int indMae;
     int indFilho;
     int cont = 0;
-    int quebraGenes = 1 + ( rand() % ( populacao->qtdGenes - 2 ) );//populacao->qtdGenes - ( populacao->qtdGenes % 2 ) / 2;
+    int qtdQuebraGenes1 = 1 + ( rand() % ( populacao->qtdGenes - 1 ) ); //0 | 1 2 3 4 5 6 7 8 | 9; 0 1 2 | 3 | 4 5 6 7 8 9
+    int qtdQuebraGenes2 = qtdQuebraGenes1 + ( rand() % ( populacao->qtdGenes - 1 - qtdQuebraGenes1 ) );
     int indSelCrossover = 0;
 
 	qsort( populacao->cromossomo , populacao->tamPopulacao , sizeof( Cromossomo ) , ordenaCrossover );
@@ -595,15 +598,15 @@ void Crossover( Populacao *populacao )
             indFilho = populacao->qtdSobreviventes + ( rand( ) % ( populacao->tamPopulacao - populacao->qtdSobreviventes - 1 ));
         } while ( populacao->cromossomo[ indFilho ].elite == 1 );
 
-		quebraGenes = 1 + ( rand( ) % populacao->qtdGenes - 2 );
-
-        // Percentual de proporcao randomico ( % pai + % mae )
+		// Percentual de proporcao randomico ( % pai + % mae + %pai)
         for ( int j = 0 ; j < populacao->qtdGenes ; ++j )
         {
-            if ( j < quebraGenes )
+	        if ( j < qtdQuebraGenes1 )
                 populacao->cromossomo[ indFilho ].genotipo[ j ] = populacao->cromossomo[ indPai ].genotipo[ j ];
-            else
+            else if( j < qtdQuebraGenes2 )
                 populacao->cromossomo[ indFilho ].genotipo[ j ] = populacao->cromossomo[ indMae ].genotipo[ j ];
+            else
+                populacao->cromossomo[ indFilho ].genotipo[ j ] = populacao->cromossomo[ indPai ].genotipo[ j ];
         }
 
         populacao->cromossomo[ indFilho ].aptidao = Fitness( populacao->cromossomo[ indFilho ].genotipo , populacao->genes , populacao->qtdGenes );
@@ -620,13 +623,15 @@ void Crossover( Populacao *populacao )
                 indFilho = populacao->qtdSobreviventes + ( rand( ) % ( populacao->tamPopulacao - populacao->qtdSobreviventes - 1 ));
             } while ( populacao->cromossomo[ indFilho ].elite == 1 );
 
-            // 50% mae + 50% pai
+            // % mae + % pai + %mae
             for ( int j = 0 ; j < populacao->qtdGenes ; ++j )
             {
-                if ( j < quebraGenes )
-                    populacao->cromossomo[ indFilho ].genotipo[ j ] = populacao->cromossomo[ indMae ].genotipo[ j ];
-                else
-                    populacao->cromossomo[ indFilho ].genotipo[ j ] = populacao->cromossomo[ indPai ].genotipo[ j ];
+			    if ( j < qtdQuebraGenes1 )
+		            populacao->cromossomo[ indFilho ].genotipo[ j ] = populacao->cromossomo[ indMae ].genotipo[ j ];
+		        else if( j < qtdQuebraGenes2 )
+		            populacao->cromossomo[ indFilho ].genotipo[ j ] = populacao->cromossomo[ indPai ].genotipo[ j ];
+		        else
+		            populacao->cromossomo[ indFilho ].genotipo[ j ] = populacao->cromossomo[ indMae ].genotipo[ j ];
             }
 
             populacao->cromossomo[ indFilho ].aptidao = Fitness( populacao->cromossomo[ indFilho ].genotipo , populacao->genes , populacao->qtdGenes );
