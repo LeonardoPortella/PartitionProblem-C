@@ -13,9 +13,10 @@ long int *FileToLista(char *fileName, int tamanhoLista)
 	
 	while( !feof(arquivo) ) 
 	{
-		fscanf(arquivo,"%li",&lista[cont++]);
+		if( fscanf(arquivo,"%li",&lista[cont++]) == 0)
+			cont--;
 	}
-
+	
 	fclose(arquivo);
 
 	return lista;
