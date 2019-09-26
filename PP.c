@@ -361,6 +361,34 @@ Populacao *NewPopulacao(long int *genes, int qtdGenes)
 
 //============================================================================================================
 
+Populacao *NewPopulacaoMPI(long int *genes, int qtdGenes)
+{
+	Populacao *populacao = ( Populacao *) malloc( sizeof( Populacao ));
+
+	if(genes == NULL)
+	{
+		char *filename = CriaArquivo( qtdGenes ); //So cria se nao existir no diretorio
+
+    	populacao->genes = FileToLista( filename , qtdGenes );
+    }
+	else
+    	populacao->genes = genes;
+
+	populacao->qtdGenes = qtdGenes;
+
+	ParametrosIniciais(populacao);
+	populacao->cromossomo = ( Cromossomo * ) malloc( ( populacao->tamPopulacao + populacao->qtdNovaGeracao ) * sizeof( Cromossomo ));
+
+    populacao->melhorCromossomo.genotipo = ( int * ) malloc( populacao->qtdGenes * sizeof( int ));
+
+	for ( int i = 0 ; i < ( populacao->tamPopulacao + populacao->qtdNovaGeracao ) ; ++i )
+        populacao->cromossomo[ i ].genotipo = ( int * ) malloc( populacao->qtdGenes * sizeof( int ));
+
+    return populacao;
+}
+
+//============================================================================================================
+
 void SetCromossomosAleatorios(Populacao *populacao)
 {
 	int tentativas = 0;
@@ -615,7 +643,7 @@ void Mutacao( Populacao *populacao )
 
 		inicioMutacao = ( rand() % ( populacao->qtdGenes - qtdGenesMutacao - 1 ) );
 
-    	for(int j = inicioMutacao; j < qtdGenesMutacao; ++j)
+    	for(int j = inicioMutacao; j < ( inicioMutacao + qtdGenesMutacao ); ++j)
 			populacao->cromossomo[ indMutacao ].genotipo[ j ] = !populacao->cromossomo[ indMutacao ].genotipo[ j ];
 
         populacao->cromossomo[ indMutacao ].aptidao = Fitness( populacao->cromossomo[ indMutacao ].genotipo , populacao->genes , populacao->qtdGenes );
