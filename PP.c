@@ -6,9 +6,19 @@
 #include <time.h>
 #include "Util.h"
 #include "GeraTeste.h"
-//#include <mpi.h>
+#include <mpi.h>
+  
+int qtdGenes;
+long int *genes;
+int repeticoes;
+int limSemMelhorFit;
+int percMutacao;
+int percMutacaoGenes;
+int seed;
+int geracaoProcMPI = 10;
 
-const int instanciasMPI = 10;
+const int tamPopulacao = 150;
+const int qtdNovaGeracao = 50;
 
 //============================================================================================================
 
@@ -27,29 +37,8 @@ typedef struct
 {
     Cromossomo *cromossomo;
 	Cromossomo melhorCromossomo;
-	int qtdGenes;
-	long int *genes;
 	long int chancesUltimo;
-	int tamPopulacao;
-	int repeticoes;
-	int limSemMelhorFit;
-	int percNovaGeracao;
-	int percMutacao;
-	int percRenovacao;
-	int qtdNovaGeracao;
-    int qtdMutacao;
-    int qtdRenovacao;
-	int qtdFilhos;
-	int percRenovacaoMin;
-	int percRenovacaoMax;
-	int percMutacaoMin;
-	int percMutacaoMax;
-	int percMutacaoGenes;
-	int rodadasAjusteParam;
-	int percMutacaoDefault;
-	int percRenovacaoDefault;
 	int iteracoesSemMelhorFit;
-
 } Populacao;
 
 //============================================================================================================
@@ -57,49 +46,11 @@ typedef struct
 void ParametrosIniciais(Populacao *populacao)
 {
 	//Fixo
-	populacao->tamPopulacao = 100;
-	populacao->repeticoes = 100000;//100000;
-	populacao->limSemMelhorFit = 500;//500;
-	populacao->rodadasAjusteParam = 1;
-	populacao->percNovaGeracao = 50;
+	repeticoes = 100000;//100000;
+	limSemMelhorFit = 500;//500;
 	populacao->iteracoesSemMelhorFit = 0;
-	populacao->percMutacaoGenes = 1;
-
-	//Default
-	populacao->percRenovacaoDefault = 0;
-	populacao->percMutacaoDefault = 1;
-	populacao->percMutacao = populacao->percMutacaoDefault;
-	populacao->percRenovacao = populacao->rodadasAjusteParam;
-
-	//Barreiras:
-	populacao->percRenovacaoMin = populacao->percRenovacaoDefault;
-	populacao->percRenovacaoMax = 0;
-	populacao->percMutacaoMin = populacao->percMutacaoDefault;
-	populacao->percMutacaoMax = 10;
-
-	populacao->qtdNovaGeracao = ( populacao->tamPopulacao * populacao->percNovaGeracao ) / 100;
-	populacao->qtdNovaGeracao = ( populacao->qtdNovaGeracao == 0 ) ? 1 : populacao->qtdNovaGeracao;
-}
-
-//============================================================================================================
-
-void AtualizaParametros(Populacao *populacao)
-{
-	if(populacao->percRenovacao < populacao->percRenovacaoMin)
-		populacao->percRenovacao = populacao->percRenovacaoMin;
-
-	if(populacao->percRenovacao > populacao->percRenovacaoMax)
-		populacao->percRenovacao = populacao->percRenovacaoMax;
-
-    populacao->qtdMutacao = ( populacao->tamPopulacao * populacao->percMutacao ) / 100;
-    populacao->qtdRenovacao = ( populacao->tamPopulacao * populacao->percRenovacao ) / 100;
-
-    populacao->qtdMutacao = ( populacao->qtdMutacao == 0 ) ? 1 : populacao->qtdMutacao;
-
-	populacao->qtdFilhos = ( populacao->tamPopulacao - populacao->qtdNovaGeracao - populacao->qtdRenovacao );
-
-	if(populacao->limSemMelhorFit > populacao->qtdGenes)
-		populacao->limSemMelhorFit = populacao->qtdGenes;
+	percMutacaoGenes = 1;
+	percMutacao = 10;
 }
 
 //============================================================================================================
@@ -182,7 +133,7 @@ void printPopulacao( Populacao *populacao , int qtdGenes )
     printf( "apt %li " , populacao->melhorCromossomo.aptidao );
     printf( "aptRoleta %li\n" , populacao->melhorCromossomo.aptidaoRoleta );
 
-	for ( int i = 0 ; i < populacao->tamPopulacao ; ++i )
+	for ( int i = 0 ; i < tamPopulacao ; ++i )
     {
         printf( "- genotipo " );
         PrintLista( populacao->cromossomo[ i ].genotipo , qtdGenes );
@@ -306,105 +257,51 @@ char *CriaArquivo( int qtdLista )
 
 //============================================================================================================
 
-int Alocou2Vezes(Populacao *populacao)
-{
-
-    int **memoria = (int **)malloc( ( populacao->tamPopulacao ) * sizeof(int *) );
-
-    for ( int i = 0 ; i < populacao->tamPopulacao ; ++i )
-        memoria[ i ] = populacao->cromossomo[ i ].genotipo;
-
-	for ( int i = 0 ; i < populacao->tamPopulacao ; ++i )
-    {
-        //printf("memoria [ %i ] %p\n",i, memoria[ i ]);
-
-        if(memoria[ i ] == populacao->melhorCromossomo.genotipo)
-		{
-            printf("Alocou 2 vezes [ %p ] indice [ %i ]!!!\n", memoria[ i ], i);
-			free(memoria);
-			return 1;
-		}
-    }
-
-	free(memoria);
-
-	return 0;
-}
-
-//============================================================================================================
-
-Populacao *NewPopulacao(long int *genes, int qtdGenes)
+Populacao *NewPopulacao()
 {
 	Populacao *populacao = ( Populacao *) malloc( sizeof( Populacao ));
 
-	if(genes == NULL)
-	{
-		char *filename = CriaArquivo( qtdGenes ); //So cria se nao existir no diretorio
-
-    	populacao->genes = FileToLista( filename , qtdGenes );
-    }
-	else
-    	populacao->genes = genes;
-
-	populacao->qtdGenes = qtdGenes;
-
 	ParametrosIniciais(populacao);
-	populacao->cromossomo = ( Cromossomo * ) malloc( ( populacao->tamPopulacao + populacao->qtdNovaGeracao ) * sizeof( Cromossomo ));
+	populacao->cromossomo = ( Cromossomo * ) malloc( tamPopulacao * sizeof( Cromossomo ));
 
-    populacao->melhorCromossomo.genotipo = ( int * ) malloc( populacao->qtdGenes * sizeof( int ));
+    populacao->melhorCromossomo.genotipo = ( int * ) malloc( qtdGenes * sizeof( int ));
 
-	for ( int i = 0 ; i < ( populacao->tamPopulacao + populacao->qtdNovaGeracao ) ; ++i )
-        populacao->cromossomo[ i ].genotipo = ( int * ) malloc( populacao->qtdGenes * sizeof( int ));
+	for ( int i = 0 ; i < tamPopulacao ; ++i )
+        populacao->cromossomo[ i ].genotipo = ( int * ) malloc( qtdGenes * sizeof( int ));
 
     return populacao;
 }
 
 //============================================================================================================
 
-Populacao *NewPopulacaoMPI(long int *genes, int qtdGenes)
-{
-	Populacao *populacao = ( Populacao *) malloc( sizeof( Populacao ));
+void CromossomoMPI(Cromossomo *cromossomo)
+{		
+	for(int i = 0; i < qtdGenes; ++i)
+		cromossomo->genotipo[ i ] = rand() % 2;
 
-	if(genes == NULL)
-	{
-		char *filename = CriaArquivo( qtdGenes ); //So cria se nao existir no diretorio
+	cromossomo->aptidao = Fitness( cromossomo->genotipo , genes , qtdGenes );
 
-    	populacao->genes = FileToLista( filename , qtdGenes );
-    }
-	else
-    	populacao->genes = genes;
-
-	populacao->qtdGenes = qtdGenes;
-
-	ParametrosIniciais(populacao);
-	populacao->cromossomo = ( Cromossomo * ) malloc( ( populacao->tamPopulacao + populacao->qtdNovaGeracao ) * sizeof( Cromossomo ));
-
-    populacao->melhorCromossomo.genotipo = ( int * ) malloc( populacao->qtdGenes * sizeof( int ));
-
-	for ( int i = 0 ; i < ( populacao->tamPopulacao + populacao->qtdNovaGeracao ) ; ++i )
-        populacao->cromossomo[ i ].genotipo = ( int * ) malloc( populacao->qtdGenes * sizeof( int ));
-
-    return populacao;
+	strcpy(cromossomo->tipo, "Pop ini");
 }
 
 //============================================================================================================
 
 void SetCromossomosAleatorios(Populacao *populacao)
 {
-	int tentativas = 0;
+	printf("Gerando populacao inicial\n");
 
-	AtualizaParametros(populacao);
+	int tentativas = 0;
 
 	populacao->chancesUltimo = -1;
 
-	long int *fitCromossomosNovos = (long int *)malloc(( populacao->tamPopulacao + populacao->qtdNovaGeracao ) * sizeof(long int));
+	long int *fitCromossomosNovos = (long int *)malloc( tamPopulacao * sizeof(long int));
 
-	for ( int i = 0 ; i < ( populacao->tamPopulacao + populacao->qtdNovaGeracao ) ; ++i )
+	for ( int i = 0 ; i < tamPopulacao ; ++i )
     {
-		if(tentativas++ <= 1)    	
-			cromossomoAleatorio( &populacao->cromossomo[ i ] , populacao->qtdGenes, populacao->genes, fitCromossomosNovos, i, 1);
+		if(tentativas++ <= -1)    	
+			cromossomoAleatorio( &populacao->cromossomo[ i ] , qtdGenes, genes, fitCromossomosNovos, i, 1);
 		else
-			cromossomoAleatorio( &populacao->cromossomo[ i ] , populacao->qtdGenes, populacao->genes, fitCromossomosNovos, i, 0);
+			cromossomoAleatorio( &populacao->cromossomo[ i ] , qtdGenes, genes, fitCromossomosNovos, i, 0);
 			
 		strcpy(populacao->cromossomo[ i ].tipo, "Pop ini");
 	}
@@ -416,12 +313,12 @@ void SetCromossomosAleatorios(Populacao *populacao)
 
 void CalculaAptidao( Populacao *populacao )
 {
-    qsort( populacao->cromossomo , ( populacao->tamPopulacao + populacao->qtdNovaGeracao ) , sizeof( Cromossomo ) , ordenaAptidao );
+    qsort( populacao->cromossomo , tamPopulacao, sizeof( Cromossomo ) , ordenaAptidao );
 
 	long int maxAptidao = 0;
 	long int aptRol = 0;
 
-	for(int i = ( populacao->tamPopulacao + populacao->qtdNovaGeracao - 1 ); i >= 0; --i)
+	for(int i = ( tamPopulacao - 1 ); i >= 0; --i)
 	{
         if(populacao->cromossomo[ i ].aptidao != INT_MAX)
         {
@@ -432,7 +329,7 @@ void CalculaAptidao( Populacao *populacao )
 
     float aptidaoAnt = 0;
 
-    for ( int i = ( populacao->tamPopulacao + populacao->qtdNovaGeracao - 1 ) ; i >= 0 ; --i )
+    for ( int i = ( tamPopulacao - 1 ) ; i >= 0 ; --i )
     {
 		//Conversão: FaptRol(apt) = max - apt
 		//max = 100
@@ -455,7 +352,7 @@ void CalculaAptidao( Populacao *populacao )
 		}
 
 		//Armazeno para, durante a Selecao, adicionar as chances do cromossomo com maior aptidao
-		if( i == populacao->tamPopulacao - 1)
+		if( i == tamPopulacao - 1)
 			populacao->chancesUltimo = aptidaoAnt;
     }
 }
@@ -466,13 +363,14 @@ void Avaliacao( Populacao *populacao, int iteracoes)
 {
 	if ( iteracoes == 1 || populacao->cromossomo[ 0 ].aptidao < populacao->melhorCromossomo.aptidao )
     {
-    	//=======================================================================================================================
+		//=======================================================================================================================
 		//=== Motivo de varias horas de debug: Copiar o struct Cromossomo, que tem um ponteiro de int em sua estrutura, =========
 		//=== faz com que na copia, o ponteiro de int tenha o mesmo endereco do ponteiro da copia. ==============================
 		//=== Precisa copiar o conteudo do ponteiro interno apenas ==============================================================
 		//=== Para copiar estrutura utilizar memcpy =============================================================================
 		//=======================================================================================================================
-		memcpy(populacao->melhorCromossomo.genotipo, populacao->cromossomo[ 0 ].genotipo, ( populacao->qtdGenes * sizeof(int) ));
+		
+		memcpy(populacao->melhorCromossomo.genotipo, populacao->cromossomo[ 0 ].genotipo, ( qtdGenes * sizeof(int) ));
 
 		populacao->melhorCromossomo.aptidao = populacao->cromossomo[ 0 ].aptidao;
 		//=======================================================================================================================
@@ -482,30 +380,19 @@ void Avaliacao( Populacao *populacao, int iteracoes)
 		printf("- Melhorou apos %i iteracoes [ Fitness %li Tipo %s ]\n", populacao->iteracoesSemMelhorFit, populacao->melhorCromossomo.aptidao, populacao->melhorCromossomo.tipo);
 
 		populacao->iteracoesSemMelhorFit = 0;
-
-		populacao->percMutacao = populacao->percMutacaoDefault;
-		populacao->percRenovacao = populacao->percRenovacaoDefault;
-	}
-	else if(iteracoes % populacao->rodadasAjusteParam == 0)
-	{
-		populacao->percMutacao++;
-		populacao->percRenovacao++;
-
-		AtualizaParametros(populacao);
 	}
 }
 
 //============================================================================================================
 
-int *Selecao( Populacao *populacao )
+void Selecao( Populacao *populacao, int *paisNovaGeracao )
 {
 	long int sorteio;
     long int maxChance;
-	int *paisNovaGeracao = (int *)malloc(populacao->qtdNovaGeracao * sizeof(int));
-
+	
     //populacao ordenado por aptidao (asc) e consequentemente por aptidaoRoleta (desc)
-
-    for(int i = 0; i < populacao->tamPopulacao; ++i)
+	
+    for(int i = 0; i < tamPopulacao; ++i)
 	{
 		if(populacao->cromossomo[ i ].aptidaoRoleta != 0 ) //Invalido
 		{
@@ -514,12 +401,12 @@ int *Selecao( Populacao *populacao )
 		}
 	}
 
-	for ( int i = 0 ; i < populacao->qtdNovaGeracao ; ++i )
+	for ( int i = 0 ; i < qtdNovaGeracao ; ++i )
     {
 		sorteio = rand( ) % maxChance;
         paisNovaGeracao[ i ] = 0;
 
-		for ( int j = 0 ; j < ( populacao->tamPopulacao + populacao->qtdNovaGeracao ); ++j )
+		for ( int j = 0 ; j < tamPopulacao; ++j )
         {
 			//sorteio rand [a] = 110; sorteio rand [b] = 55; sorteio rand [c] = 20;  sorteio rand [d] = 50
 			//aptRoleta[0] = 100 - [a] -     -     -
@@ -531,42 +418,25 @@ int *Selecao( Populacao *populacao )
             else
                 break;
         }
+
+		//printf("Aqui i = %i paisNovaGeracao[ i ] = %i\n", i, paisNovaGeracao[ i ]);
     }
-
-	return paisNovaGeracao;
-}
-
-//============================================================================================================
-
-void Renovacao( Populacao *populacao)
-{
-    int indFilho;
-    long int *fitCromossomosNovos = (long int *)malloc(populacao->qtdRenovacao * sizeof(long int));
-
-	for ( int i = 0 ; i < populacao->qtdRenovacao ; ++i )
-    {
-        indFilho = populacao->tamPopulacao + ( rand( ) % ( populacao->qtdNovaGeracao - 1 ));
-
-        cromossomoAleatorio( &populacao->cromossomo[ indFilho ] , populacao->qtdGenes, populacao->genes, fitCromossomosNovos, i, 1 );
-
-		strcpy(populacao->cromossomo[ indFilho ].tipo, "Renovacao");
-    }
-
-	free(fitCromossomosNovos);
+	
+	//return paisNovaGeracao;
 }
 
 //============================================================================================================
 
 void FilhosCrossover(Populacao *populacao, Cromossomo *filho1, Cromossomo *filho2, Cromossomo pai, Cromossomo mae)
 {
-	//populacao->qtdGenes = 1000
+	//qtdGenes = 1000
 	//qtdQuebraGenes1 = 1 + [ 0, 997 ]
-	int qtdQuebraGenes1 = 1 + ( rand() % ( populacao->qtdGenes - 3 ) ); //0 | 1 2 3 4 5 6 7 8 | 9; 0 1 2 | 3 | 4 5 6 7 8 9
+	int qtdQuebraGenes1 = 1 + ( rand() % ( qtdGenes - 3 ) ); //0 | 1 2 3 4 5 6 7 8 | 9; 0 1 2 | 3 | 4 5 6 7 8 9
 	//qtdQuebraGenes2 = 998 + [ 0, 1 ]
-	int qtdQuebraGenes2 = qtdQuebraGenes1 + 1 + ( rand() % ( populacao->qtdGenes - qtdQuebraGenes1 - 2) );
+	int qtdQuebraGenes2 = qtdQuebraGenes1 + 1 + ( rand() % ( qtdGenes - qtdQuebraGenes1 - 2) );
 
 	// Percentual de proporcao randomico ( % pai + % mae + % pai)
-    for ( int j = 0 ; j < populacao->qtdGenes ; ++j )
+    for ( int j = 0 ; j < qtdGenes ; ++j )
     {
 	    if ( j < qtdQuebraGenes1 )
             filho1->genotipo[ j ] = pai.genotipo[ j ];
@@ -576,12 +446,12 @@ void FilhosCrossover(Populacao *populacao, Cromossomo *filho1, Cromossomo *filho
             filho1->genotipo[ j ] = pai.genotipo[ j ];
     }
 
-    filho1->aptidao = Fitness( filho1->genotipo , populacao->genes , populacao->qtdGenes );
+    filho1->aptidao = Fitness( filho1->genotipo , genes , qtdGenes );
 
 	strcpy(filho1->tipo, "Crossover");
 
 	// Percentual de proporcao randomico ( % mae  + % pai + % mae)
-    for ( int j = 0 ; j < populacao->qtdGenes ; ++j )
+    for ( int j = 0 ; j < qtdGenes ; ++j )
     {
 	    if ( j < qtdQuebraGenes1 )
             filho2->genotipo[ j ] = pai.genotipo[ j ];
@@ -591,9 +461,10 @@ void FilhosCrossover(Populacao *populacao, Cromossomo *filho1, Cromossomo *filho
             filho2->genotipo[ j ] = pai.genotipo[ j ];
     }
 
-    filho2->aptidao = Fitness( filho2->genotipo , populacao->genes , populacao->qtdGenes );
+    filho2->aptidao = Fitness( filho2->genotipo , genes , qtdGenes );
 
 	strcpy(filho2->tipo, "Crossover");
+
 }
 
 //============================================================================================================
@@ -606,18 +477,18 @@ void Crossover( Populacao *populacao, int *paisNovaGeracao )
     int indMae;
     int indFilho1;
     int indFilho2;
-    int cont = 0;
+    int cont = qtdNovaGeracao;
 
-	for(int i = 0; i < ( populacao->qtdNovaGeracao - 1 ); i += 2)
+	for(int i = 0; i < ( qtdNovaGeracao - 1 ); i += 2)
 	{
 		indPai = paisNovaGeracao[i];
 		indMae = paisNovaGeracao[i + 1];
 
-		indFilho1 = cont++ + populacao->tamPopulacao; //Filhos serao os ultimos na lista de cromossomos
-		populacao->cromossomo[ indFilho1 ];
-
-		indFilho2 = cont++ + populacao->tamPopulacao; //Filhos serao os ultimos na lista de cromossomos
-		populacao->cromossomo[ indFilho2 ];
+		indFilho1 = tamPopulacao - cont--; //Filhos serao os ultimos na lista de cromossomos
+		
+		indFilho2 = tamPopulacao - cont--; //Filhos serao os ultimos na lista de cromossomos
+		
+		//printf("Aqui indPai %i indMae %i indFilho1 %i indFilho2 %i\n", indPai, indMae, indFilho1, indFilho2);
 
 		FilhosCrossover(populacao, &populacao->cromossomo[ indFilho1 ], &populacao->cromossomo[ indFilho2 ], populacao->cromossomo[ indPai ], populacao->cromossomo[ indMae ]);
 	}
@@ -630,23 +501,26 @@ void Crossover( Populacao *populacao, int *paisNovaGeracao )
 void Mutacao( Populacao *populacao )
 {
     int indMutacao;
-    int qtdGenesMutacao = ( populacao->qtdGenes * populacao->percMutacaoGenes ) / 100;
+    int qtdGenesMutacao = ( qtdGenes * percMutacaoGenes ) / 100;
 	int inicioMutacao;
+	int qtdMutacao = ( tamPopulacao * percMutacao ) / 100;
+	
+	qtdMutacao = ( qtdMutacao == 0 ) ? 1 : qtdMutacao;
 
 	if(qtdGenesMutacao == 0)
         qtdGenesMutacao = 1;
-
-    for ( int i = 0 ; i < populacao->qtdMutacao ; ++i )
+	
+	for ( int i = 0 ; i < qtdMutacao ; ++i )
     {
 		//Mutacao so ocorrera na nova geracao
-        indMutacao = populacao->tamPopulacao + ( rand( ) % ( populacao->qtdNovaGeracao - 1 ));
+        indMutacao = tamPopulacao - ( rand( ) % qtdNovaGeracao ) - 1;
 
-		inicioMutacao = ( rand() % ( populacao->qtdGenes - qtdGenesMutacao - 1 ) );
+		inicioMutacao = ( rand() % ( qtdGenes - qtdGenesMutacao ) - 1 );
 
     	for(int j = inicioMutacao; j < ( inicioMutacao + qtdGenesMutacao ); ++j)
 			populacao->cromossomo[ indMutacao ].genotipo[ j ] = !populacao->cromossomo[ indMutacao ].genotipo[ j ];
 
-        populacao->cromossomo[ indMutacao ].aptidao = Fitness( populacao->cromossomo[ indMutacao ].genotipo , populacao->genes , populacao->qtdGenes );
+        populacao->cromossomo[ indMutacao ].aptidao = Fitness( populacao->cromossomo[ indMutacao ].genotipo , genes , qtdGenes );
 
 		strcpy(populacao->cromossomo[ indMutacao ].tipo, "Mutacao");
     }
@@ -658,40 +532,42 @@ void SincronizaPopulacao(Populacao *popResultante, Populacao *popMPI)
 {
 	//A populacao resultante tera os melhores fitness gerados por cada processo paralelo, 50% de cada um.
 
-	int metade = ( popResultante->tamPopulacao - popResultante->tamPopulacao % 2 ) / 2;
+	int metade = ( tamPopulacao - ( tamPopulacao % 2 ) ) / 2;
 
-	qsort( popResultante->cromossomo , popResultante->tamPopulacao , sizeof( Cromossomo ) , ordenaAptidao );
+	qsort( popResultante->cromossomo , tamPopulacao , sizeof( Cromossomo ) , ordenaAptidao );
 
-    qsort( popMPI->cromossomo , popMPI->tamPopulacao , sizeof( Cromossomo ) , ordenaAptidao );
+    qsort( popMPI->cromossomo , tamPopulacao , sizeof( Cromossomo ) , ordenaAptidao );
 
-	for(int i = metade; i < popResultante->tamPopulacao; ++i)
+	for(int i = metade; i < tamPopulacao; ++i)
 		popResultante->cromossomo[i] = popMPI->cromossomo[i];
 
-	qsort( popResultante->cromossomo , popResultante->tamPopulacao , sizeof( Cromossomo ) , ordenaAptidao );
+	qsort( popResultante->cromossomo , tamPopulacao , sizeof( Cromossomo ) , ordenaAptidao );
 }
 
 //============================================================================================================
 
-void ProcessaGeneticoMPI(Populacao *populacao)
+void ProcessaGeneticoOLD(Populacao *populacao)
 {
     int cont = 0;
 
-    while ( cont++ < populacao->repeticoes && populacao->iteracoesSemMelhorFit++ < populacao->limSemMelhorFit )
+    while ( cont++ < repeticoes && populacao->iteracoesSemMelhorFit++ < limSemMelhorFit )
     {
 		//printf( "CalculaAptidao [ %i ]\n", cont);
 		CalculaAptidao( populacao );
 
-        //printf( "Avaliacao [ %i ]\n", cont);
+		//printf( "Avaliacao [ %i ]\n", cont);
 		Avaliacao(populacao, cont);
 
 		if(populacao->melhorCromossomo.aptidao == 0) //Solucao otima (pode nao ser possivel...)
 			break;
 
-		//printf( "Selecao/Crossover [ %i ]\n", cont);
-		Crossover( populacao, Selecao( populacao ) );
+		int *paisNovaGeracao = (int *)malloc(qtdNovaGeracao * sizeof(int));
+		
+		//printf( "Selecao [ %i ]\n", cont);
+		Selecao( populacao, paisNovaGeracao );
 
-		//printf( "Renovacao [ %i ]\n", cont);
-		//Renovacao( populacao );
+		//printf( "Crossover [ %i ]\n", cont);
+		Crossover( populacao, paisNovaGeracao );
 
         //printf( "Mutacao [ %i ]\n", cont);
 		Mutacao( populacao );
@@ -700,52 +576,228 @@ void ProcessaGeneticoMPI(Populacao *populacao)
 
 //============================================================================================================
 
-void ProcessaGenetico(int qtdGenes, int seed)
+void ProcessaGeneticoMPI(Populacao *populacao)
 {
-	time_t segundos;
-    struct tm *data_hora_atual;
-    time( &segundos );
-    data_hora_atual = localtime( &segundos );
+    int cont = 0;
 
-    clock_t inicio = clock( );
+    while ( cont++ < repeticoes && populacao->iteracoesSemMelhorFit++ < limSemMelhorFit )
+    {
+		//printf( "CalculaAptidao [ %i ]\n", cont);
+		CalculaAptidao( populacao );
 
-	printf("Gerando populacao inicial\n");
+		//printf( "Avaliacao [ %i ]\n", cont);
+		Avaliacao(populacao, cont);
 
-	Populacao *populacao = NewPopulacao(NULL, qtdGenes);
-	SetCromossomosAleatorios( populacao );
+		if(populacao->melhorCromossomo.aptidao == 0) //Solucao otima (pode nao ser possivel...)
+			break;
 
-	printf
-	(
-		"- Processamento [ %d:%d:%d ]:\n  - Genes [%i] Populacao [%i] Nova Geracao [%i%%-%i] \n Renovacao [%i%%-%i] Mutacao [%i%%-%i] Repeticoes [%i]\n" ,
-            data_hora_atual->tm_hour ,
-			data_hora_atual->tm_min ,
-			data_hora_atual->tm_sec ,
-			qtdGenes , populacao->tamPopulacao ,
-            populacao->percNovaGeracao ,
-			populacao->qtdNovaGeracao ,
-			populacao->percRenovacao ,
-			populacao->qtdRenovacao ,
-			populacao->percMutacao ,
-            populacao->qtdMutacao ,
-			populacao->repeticoes
-	);
+		int *paisNovaGeracao = (int *)malloc(qtdNovaGeracao * sizeof(int));
+		
+		//printf( "Selecao [ %i ]\n", cont);
+		Selecao( populacao, paisNovaGeracao );
 
-	ProcessaGeneticoMPI( populacao );
+		//printf( "Crossover [ %i ]\n", cont);
+		Crossover( populacao, paisNovaGeracao );
 
-    clock_t fim = clock( );
+        //printf( "Mutacao [ %i ]\n", cont);
+		Mutacao( populacao );
+	}
+}
 
-    printf( "Solucao [ %f segundos ]\n" , (( float ) ( fim - inicio )) / CLOCKS_PER_SEC );
+//============================================================================================================
 
-    PrintSolucao( populacao->melhorCromossomo.genotipo , populacao->genes , qtdGenes );
+int MPI( int argc , char **argv )
+{
+	int numtasks, pid, rc, dest, source, count, entrada, tag = 1;
+	
+	MPI_Status status;
 
-	free( populacao->genes );
+	rc = MPI_Init(&argc, &argv);
+    
+	if(rc != MPI_SUCCESS)
+	{
+		fprintf(stderr, "Erro ao iniciar o MPI");
+		MPI_Abort(MPI_COMM_WORLD, rc);
+	}
+	else
+	{
+		MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
+		MPI_Comm_rank(MPI_COMM_WORLD, &pid);
 
-    for(int i = 0; i < populacao->tamPopulacao; ++i)
-        free( populacao->cromossomo[ i ].genotipo );
+		//=====================================================================================
+		//Tipo MPI_Cromossomo =================================================================
+		//=====================================================================================
+		
+		int itemsCrom = 4;
+		int tamanhosCrom[4] = {1,1,1,10};
+		MPI_Datatype tiposCrom[4] = { MPI_INT, MPI_LONG, MPI_LONG, MPI_CHAR };
+		MPI_Datatype MPI_Cromossomo;
+		MPI_Aint offsetsCrom[4];
 
-    free( populacao->cromossomo );
-    free( populacao->melhorCromossomo.genotipo );
-    free( populacao );
+		offsetsCrom[0] = offsetof(Cromossomo, genotipo);
+		offsetsCrom[1] = offsetof(Cromossomo, aptidao);
+		offsetsCrom[2] = offsetof(Cromossomo, aptidaoRoleta);
+		offsetsCrom[3] = offsetof(Cromossomo, tipo);
+
+		MPI_Type_create_struct(itemsCrom, tamanhosCrom, offsetsCrom, tiposCrom, &MPI_Cromossomo);
+		MPI_Type_commit(&MPI_Cromossomo);
+
+		//=====================================================================================
+		//Tipo MPI_Populacao =================================================================
+		//=====================================================================================
+
+	    int itemsPop = 4;
+		int tamanhosPop[4] = {1,1,1,1};
+		MPI_Datatype tiposPop[4] = { MPI_Cromossomo, MPI_Cromossomo, MPI_LONG, MPI_INT };
+		MPI_Datatype MPI_Populacao;
+		MPI_Aint offsetsPop[4];
+
+		offsetsPop[0] = offsetof(Populacao, cromossomo);
+		offsetsPop[1] = offsetof(Populacao, melhorCromossomo);
+		offsetsPop[2] = offsetof(Populacao, chancesUltimo);
+		offsetsPop[3] = offsetof(Populacao, iteracoesSemMelhorFit);
+
+		MPI_Type_create_struct(itemsPop, tamanhosPop, offsetsPop, tiposPop, &MPI_Populacao);
+		MPI_Type_commit(&MPI_Populacao);
+		
+		//=====================================================================================
+
+		if(pid == 0)
+		{  
+			time_t segundos;
+			struct tm *data_hora_atual;
+			time( &segundos );
+			data_hora_atual = localtime( &segundos );
+
+			clock_t inicio = clock( );
+
+			//=================
+			//Populacao Inicial
+			//=================
+			
+			printf("Gerando populacao inicial\n");
+
+			Populacao *populacao = NewPopulacao();
+
+			ParametrosIniciais(populacao);
+
+			int sobras = tamPopulacao % ( numtasks - 1);
+			int qtdGerar = ( tamPopulacao - sobras ) / ( numtasks - 1); 
+
+			int aux = qtdGerar;
+
+			for(int i = 1; i < numtasks; ++i)
+				MPI_Send(&aux, 1, MPI_INT, i, tag, MPI_COMM_WORLD);
+			
+			Cromossomo *buffer = ( Cromossomo * )malloc( qtdGerar * sizeof(Cromossomo) );
+			
+			for(int i = 0; i < qtdGerar; ++i)
+				buffer[ i ].genotipo = (int *)malloc(qtdGenes * sizeof(int));
+			
+			int indPopulacao = 0;
+
+			for(int i = 1; i < numtasks; ++i)
+			{
+				MPI_Recv(buffer, qtdGerar, MPI_Cromossomo, i, tag, MPI_COMM_WORLD, &status);
+
+				for(int j = 0; j < qtdGerar; ++j)
+				{
+					populacao->cromossomo[ indPopulacao ] = buffer[ j ];
+
+					populacao->cromossomo[ indPopulacao ].genotipo = (int *)malloc(qtdGenes * sizeof(int));
+					MPI_Recv(populacao->cromossomo[ indPopulacao ].genotipo, qtdGenes, MPI_INT, i, tag, MPI_COMM_WORLD, &status);
+
+					++indPopulacao;
+				}
+			}
+			
+			free(buffer);
+
+			for(int i = 0; i < sobras; ++i)
+			{
+				populacao->cromossomo[ indPopulacao ].genotipo = (int *)malloc(qtdGenes * sizeof(int));	
+	
+				CromossomoMPI(&populacao->cromossomo[ indPopulacao++ ]);
+			}
+
+			//=============
+			//Processamento
+			//=============
+
+			printf
+			(
+				"- Processamento [ %d:%d:%d ]:\n  - Genes [%i] Populacao [%i] Nova Geracao [%i] \n Mutacao [%i%%] Repeticoes [%i]\n" ,
+				    data_hora_atual->tm_hour ,
+					data_hora_atual->tm_min ,
+					data_hora_atual->tm_sec ,
+					qtdGenes , tamPopulacao ,
+				    qtdNovaGeracao ,
+					percMutacao ,
+					repeticoes
+			);
+
+			ProcessaGeneticoMPI( populacao );
+
+    		clock_t fim = clock( );
+
+			printf( "Solucao [ %f segundos ]\n" , (( float ) ( fim - inicio )) / CLOCKS_PER_SEC );
+
+			PrintSolucao( populacao->melhorCromossomo.genotipo , genes , qtdGenes );
+		
+			free( genes );
+			free( populacao->cromossomo );
+			free( populacao->melhorCromossomo.genotipo );
+			free( populacao );
+		}
+		else if(pid < numtasks)
+		{
+			//Se todos os processos usarem a mesma seed entao todos gerarao as mesmas populacoes			
+			srand(seed + pid);
+
+			//=================
+			//Populacao Inicial
+			//=================
+			
+			int qtdGerar;
+			
+			MPI_Recv(&qtdGerar, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, &status);
+			
+			Cromossomo *cromossomo = (Cromossomo *)malloc(qtdGerar * sizeof(Cromossomo));
+
+			for(int i = 0; i < qtdGerar; ++i)
+			{
+				cromossomo[ i ].genotipo = (int *)malloc(qtdGenes * sizeof(int));	
+				CromossomoMPI(&cromossomo[ i ]);
+			}
+			
+			//========================================================================================
+			//Obs: Como genotipo e ponteiro dentro de ponteiro, o segundo malloc nao pode ser acessado 
+			//fora desta thread e por isso vou precisar enviar separadamente depois
+			//========================================================================================
+			
+			MPI_Send(cromossomo, qtdGerar, MPI_Cromossomo, 0, tag, MPI_COMM_WORLD);
+
+			for(int i = 0; i < qtdGerar; ++i)
+				MPI_Send(cromossomo[ i ].genotipo, qtdGenes, MPI_INT, 0, tag, MPI_COMM_WORLD);
+			
+			//========================================================================================
+			
+			for(int i = 0; i < qtdGerar; ++i)
+				free(cromossomo[ i ].genotipo);
+			
+			free(cromossomo);
+
+			//=============
+			//Processamento
+			//=============
+
+			
+		}
+		
+		MPI_Type_free(&MPI_Cromossomo);
+	}
+
+	MPI_Finalize();
 }
 
 //============================================================================================================
@@ -755,11 +807,18 @@ int main( int argc , char **argv )
 	if(argc < 3)
 	{
 		fprintf(stderr, "Informe o tamanho da amostra e a semente\n");
-		return 1;
+		return -1;
 	}
+		
+	seed = atoi(argv[2]);
+	srand( seed );
 
-	srand( atoi(argv[2]) );
+	qtdGenes = atoi(argv[1]); 
+	
+	char *filename = CriaArquivo( qtdGenes ); //So cria se nao existir no diretorio
 
-	ProcessaGenetico(atoi(argv[1]), 5);
+	genes = FileToLista( filename , qtdGenes );
+	
+	MPI(argc, argv);
 }
 
