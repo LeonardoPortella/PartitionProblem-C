@@ -22,6 +22,8 @@ long int *FileToLista(char *fileName, int tamanhoLista)
 	return lista;
 }
 
+//=================================================================================================================================
+
 void ListaAleatoria(unsigned long int limiteInferior, unsigned long int limiteSuperior, int tamanhoLista, char* nomeArq)
 {
 	FILE *out = stdout;
@@ -47,6 +49,8 @@ void ListaAleatoria(unsigned long int limiteInferior, unsigned long int limiteSu
 
 	fclose(out);
 }
+
+//=================================================================================================================================
 
 void ListaSequencial(int limiteInferior, int tamanhoLista, char* nomeArq)
 {
