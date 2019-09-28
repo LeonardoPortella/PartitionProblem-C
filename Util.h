@@ -22,7 +22,7 @@ void Limites() {
 
 //============================================================================================================
 
-int IndexLista(int item, int *lista, int sizeLista)
+int IndexLista(int item, unsigned long int *lista, int sizeLista)
 {
 	int ind = -1;
 

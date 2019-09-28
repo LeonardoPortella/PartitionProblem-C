@@ -22,17 +22,17 @@ long int *FileToLista(char *fileName, int tamanhoLista)
 	return lista;
 }
 
-void ListaAleatoria(int limiteInferior, int limiteSuperior, int tamanhoLista, char* nomeArq)
+void ListaAleatoria(unsigned long int limiteInferior, unsigned long int limiteSuperior, int tamanhoLista, char* nomeArq)
 {
 	FILE *out = stdout;
 	int cont = 0;
-	int *lista = (int*)malloc(tamanhoLista * sizeof(int));
+	unsigned long int *lista = (unsigned long int*)malloc(tamanhoLista * sizeof(unsigned long int));
 	
 	out = fopen(nomeArq, "w");
 	
 	while(cont < tamanhoLista)
 	{
-		int aux = limiteInferior + ( rand() % ( limiteSuperior - 1 ) );
+		unsigned long int aux = limiteInferior + ( rand() % ( limiteSuperior - 1 ) );
 		
 		if(IndexLista(aux, lista, tamanhoLista) == -1)
 			lista[cont++] = aux;
@@ -40,7 +40,7 @@ void ListaAleatoria(int limiteInferior, int limiteSuperior, int tamanhoLista, ch
 
 	for(int i = 0; i < tamanhoLista; ++i)
 	{
-		fprintf(out, "%i ", lista[i] );
+		fprintf(out, "%li ", lista[i] );
 	}
 
 	free(lista);
