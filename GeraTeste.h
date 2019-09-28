@@ -40,7 +40,7 @@ void ListaAleatoria(int limiteInferior, int limiteSuperior, int tamanhoLista, ch
 
 	for(int i = 0; i < tamanhoLista; ++i)
 	{
-		fprintf(out, "%i\n", lista[i] );
+		fprintf(out, "%i ", lista[i] );
 	}
 
 	free(lista);
@@ -55,7 +55,7 @@ void ListaSequencial(int limiteInferior, int tamanhoLista, char* nomeArq)
 	out = fopen(nomeArq, "w");
 	
 	for(int i = 1; i <= tamanhoLista; ++i)
-		fprintf(out, "%i\n", i );
+		fprintf(out, "%i ", i );
 	
 	fclose(out);
 }
