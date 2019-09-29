@@ -10,6 +10,7 @@
 #include "Util.h"
 #include "GeraTeste.h"
 #include <mpi.h>
+#include <time.h>
   
 int qtdGenes;
 unsigned long int *genes;
@@ -58,13 +59,6 @@ void ParametrosIniciais(Populacao *populacao)
 	percMutacaoDefault = 10;
 	percMutacaoGenes = percMutacaoGenesDefault;
 	percMutacao = percMutacaoDefault;
-}
-
-//============================================================================================================
-
-int ordena( const void *a , const void *b )
-{
-    return ( a - b );
 }
 
 //============================================================================================================
