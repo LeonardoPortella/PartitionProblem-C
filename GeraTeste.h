@@ -1,7 +1,9 @@
-long int *FileToLista(char *fileName, int tamanhoLista)
+#include <time.h>
+
+unsigned long int *FileToLista(char *fileName, int tamanhoLista)
 {
 	FILE *arquivo = fopen(fileName, "r");
-	long int *lista = (long int*)malloc(tamanhoLista * sizeof(long int));
+	unsigned long int *lista = (unsigned long int*)malloc(tamanhoLista * sizeof(unsigned long int));
 
 	if(arquivo == NULL) 
 	{
@@ -13,7 +15,7 @@ long int *FileToLista(char *fileName, int tamanhoLista)
 	
 	while( !feof(arquivo) ) 
 	{
-		if( fscanf(arquivo,"%li",&lista[cont++]) == 0)
+		if( fscanf(arquivo,"%lu",&lista[cont++]) == 0)
 			cont--;
 	}
 	
@@ -30,6 +32,8 @@ void ListaAleatoria(unsigned long int limiteInferior, unsigned long int limiteSu
 	int cont = 0;
 	unsigned long int *lista = (unsigned long int*)malloc(tamanhoLista * sizeof(unsigned long int));
 	
+	srand(time(NULL));
+
 	out = fopen(nomeArq, "w");
 	
 	while(cont < tamanhoLista)

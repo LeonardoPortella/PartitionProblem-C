@@ -64,7 +64,7 @@ void ParametrosIniciais(Populacao *populacao)
 
 int ordena( const void *a , const void *b )
 {
-    return ( a - b );
+    return ( *(int*)a - *(int*)b );
 }
 
 //============================================================================================================
@@ -409,7 +409,7 @@ int *Selecao( Populacao *populacao )
 	int *paisNovaGeracao = (int *)malloc(qtdNovaGeracao * sizeof(int));
 		
 	unsigned long int sorteio;
-    unsigned long int maxChance;
+    unsigned long int maxChance = 0;
 	
     //populacao ordenado por aptidao (asc) e consequentemente por aptidaoRoleta (desc)
 	
@@ -590,7 +590,7 @@ void ProcessaGeneticoMPI(Populacao *populacao)
 
 //============================================================================================================
 
-int MPI( int argc , char **argv )
+void MPI( int argc , char **argv )
 {
 	int numtasks , pid , rc , tag = 1;
 
@@ -788,7 +788,7 @@ int MPI( int argc , char **argv )
 	}
     
 	MPI_Finalize();
-    }
+}
 
 //============================================================================================================
 
