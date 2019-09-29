@@ -335,8 +335,8 @@ void CalculaAptidao( Populacao *populacao )
         }
 	}
 
-    float aptidaoAnt = 0;
-
+	unsigned long int aptidaoAnt = 0;
+	
     for ( int i = ( tamPopulacao - 1 ) ; i >= 0 ; --i )
     {
 		//Conversão: FaptRol(apt) = max - apt
@@ -355,8 +355,6 @@ void CalculaAptidao( Populacao *populacao )
 
         	populacao->cromossomo[ i ].aptidaoRoleta = aptRol;
         	populacao->cromossomo[ i ].aptidaoRoleta += aptidaoAnt; //As chances sao o espaco entre as aptidoes
-
-        	aptidaoAnt += aptRol;
 		}
 
 		//Armazeno para, durante a Selecao, adicionar as chances do cromossomo com maior aptidao
@@ -413,7 +411,7 @@ int *Selecao( Populacao *populacao )
 	
     //populacao ordenado por aptidao (asc) e consequentemente por aptidaoRoleta (desc)
 	
-    for(int i = 0; i < tamPopulacao; ++i)
+	for(int i = 0; i < tamPopulacao; ++i)
 	{
 		if(populacao->cromossomo[ i ].aptidaoRoleta != 0 ) //Invalido
 		{
@@ -425,8 +423,9 @@ int *Selecao( Populacao *populacao )
 	for ( int i = 0 ; i < qtdNovaGeracao ; ++i )
     {
 		sorteio = rand( ) % maxChance;
-        paisNovaGeracao[ i ] = 0;
-
+        
+    	paisNovaGeracao[ i ] = 0;
+    
 		for ( int j = 0 ; j < tamPopulacao; ++j )
         {
 			//sorteio rand [a] = 110; sorteio rand [b] = 55; sorteio rand [c] = 20;  sorteio rand [d] = 50
@@ -440,7 +439,7 @@ int *Selecao( Populacao *populacao )
                 break;
         }
     }
-	
+    
 	return paisNovaGeracao;
 }
 
@@ -624,24 +623,6 @@ void MPI( int argc , char **argv )
 		MPI_Type_commit(&MPI_Cromossomo);
 
 		//=====================================================================================
-		//Tipo MPI_Populacao =================================================================
-		//=====================================================================================
-		/*
-	    int itemsPop = 4;
-		int tamanhosPop[4] = {1,1,1,1};
-		MPI_Datatype tiposPop[4] = { MPI_Cromossomo, MPI_Cromossomo, MPI_LONG, MPI_INT };
-		MPI_Datatype MPI_Populacao;
-		MPI_Aint offsetsPop[4];
-
-		offsetsPop[0] = offsetof(Populacao, cromossomo);
-		offsetsPop[1] = offsetof(Populacao, melhorCromossomo);
-		offsetsPop[2] = offsetof(Populacao, chancesUltimo);
-		offsetsPop[3] = offsetof(Populacao, iteracoesSemMelhorFit);
-
-		MPI_Type_create_struct(itemsPop, tamanhosPop, offsetsPop, tiposPop, &MPI_Populacao);
-		MPI_Type_commit(&MPI_Populacao);
-		*/
-		//=====================================================================================
 
 		MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 		MPI_Comm_rank(MPI_COMM_WORLD, &pid);
@@ -778,10 +759,6 @@ void MPI( int argc , char **argv )
 				free(cromossomo[ i ].genotipo);
 			
 			free(cromossomo);
-
-			//=============
-			//Processamento
-			//=============
 		}
 		
 		MPI_Type_free(&MPI_Cromossomo);
