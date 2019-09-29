@@ -1,0 +1,9 @@
+﻿  PP.c
+E:\PartitionProblem-C\PP.c(351): warning C4244: '+=': conversion from 'float' to 'unsigned long', possible loss of data
+E:\PartitionProblem-C\PP.c(358): warning C4244: '=': conversion from 'float' to 'unsigned long', possible loss of data
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+E:\PartitionProblem-C\PP.c(785): warning C4716: 'MPI': must return a value
+  All 32 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  PartitionProblem-C.vcxproj -> E:\PartitionProblem-C\x64\Release\PartitionProblem-C.exe
